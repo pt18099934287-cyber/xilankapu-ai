@@ -14,7 +14,7 @@ if not os.path.exists(STATIC_FOLDER):
 
 # 2. Hugging Face API 配置
 # ⚠️ 你的 Token
-HF_API_TOKEN = "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"
+HF_API_TOKEN = "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"
 
 # 使用 Stable Diffusion XL Base 1.0
 API_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-base-1.0"
@@ -133,4 +133,5 @@ def generate():
         return jsonify({"success": False, "error": str(e)})
 
 if __name__ == '__main__':
+
     app.run()
