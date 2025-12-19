@@ -4,6 +4,14 @@ import requests
 import json
 from flask import Flask, render_template, request, jsonify
 
+# 尝试导入 dotenv，用于本地开发读取 .env 文件
+# 如果在 Render 上运行，没有这个库也没关系，它会直接读取系统变量
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 app = Flask(__name__)
 
 # ================= 配置区域 =================
@@ -13,12 +21,13 @@ if not os.path.exists(STATIC_FOLDER):
     os.makedirs(STATIC_FOLDER)
 
 # 2. Hugging Face API 配置
-# ✅ 正确写法（安全，不会过期）
+# ✅ 从环境变量获取 Token (安全模式)
 HF_API_TOKEN = os.environ.get("HF_API_TOKEN")
 
 # 增加一个检查，防止没配置变量导致程序崩溃
 if not HF_API_TOKEN:
-    raise ValueError("请在环境变量中设置 HF_API_TOKEN")
+    print("⚠️ 严重警告: 未检测到 HF_API_TOKEN 环境变量！程序可能无法正常生成图片。")
+    print("请在本地创建 .env 文件，或在 Render 后台添加 Environment Variable。")
 
 # 使用 Stable Diffusion XL Base 1.0
 API_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-base-1.0"
@@ -35,19 +44,22 @@ def build_expert_prompt(keyword):
         "traditional Tujia brocade (Xilankapu) textile pattern, "
         "pixel art style, cross-stitch embroidery texture, "
         "visible woven thread grain, flat orthographic view, "
-        "strict geometric straight lines, no curves, no realistic flowers. "
+        "strict geometric straight lines, no curves. "
     )
 
-    # 针对“岩墙花”的特殊结构描述
+    # 针对“岩墙花”的特殊结构描述 (✅ 修复版：强制长条形，禁止画成地毯)
     if "花" in keyword or "岩墙" in keyword:
         content_desc = (
-            "Subject: 'Rock Wall Flower' (Yanqianghua). "
-            "Composition: Continuous 'Eight-Hook' fret pattern skeleton. "
-            "Filler: Diamond and zigzag geometric fragments filling the gaps. "
-            "Symmetric layout. "
+            "Subject: Traditional Tujia Brocade 'Rock Wall Flower' (Yanqianghua). "
+            "Composition: A vertical runner pattern (long strip). "  # 强制长条形
+            "Pattern: A continuous column of interlocking Hexagons and Diamonds. " # 强制连续几何
+            "Structure: The 'Eight-Hook' geometric skeleton frame. "
+            "Center: Abstract nested rhombuses, NOT a realistic flower. " 
+            "Layout: Repeating pattern from top to bottom (Two-way continuous). "
+            "Style: NOT a square rug, but a long textile fabric. " # 禁止方地毯
         )
     elif "鸟" in keyword or "阳雀" in keyword:
-        content_desc = "Subject: Abstract geometric bird totem, sharp triangles, symmetric. "
+        content_desc = "Subject: Abstract geometric bird totem, sharp triangles, symmetric totem, repeating pattern. "
     else:
         content_desc = f"Subject: Geometric pattern based on concept '{keyword}', repeating abstract shapes. "
 
@@ -89,13 +101,13 @@ def generate():
         prompt_text = build_expert_prompt(keyword)
         print(f"正在请求 AI, Prompt: {prompt_text[:60]}...")
 
-        # 2. 调用 API
+        # 2. 调用 API (增加 negative_prompt 禁止画地毯)
         image_bytes = query_huggingface_api({
             "inputs": prompt_text,
             "parameters": {
-                "negative_prompt": "blurry, low quality, 3d render, messy lines, curves, organic shapes, watermark, text, realistic photo",
-                "width": 1024,
-                "height": 1024,
+                "negative_prompt": "rug, carpet, central medallion, realistic flower, round shape, blurry, low quality, 3d render, messy lines, curves, organic shapes, watermark, text, realistic photo",
+                "width": 768,  # ✅ 修改：宽度变窄
+                "height": 1024, # ✅ 修改：高度变高，强制生成长条形
                 "num_inference_steps": 25, 
             }
         })
@@ -103,9 +115,7 @@ def generate():
         if image_bytes is None:
              return jsonify({"success": False, "error": "网络连接失败，请检查网络设置。"})
 
-        # 3. 错误处理逻辑 (✅ 修复了这里)
-        # 我们先假设它是 JSON 错误信息尝试解码
-        # 如果解码失败（UnicodeDecodeError），说明它是二进制图片数据，直接保存！
+        # 3. 错误处理逻辑 (二进制检查)
         try:
             # 尝试将字节流解码为字符串
             text_response = image_bytes.decode('utf-8')
@@ -137,6 +147,6 @@ def generate():
         return jsonify({"success": False, "error": str(e)})
 
 if __name__ == '__main__':
-
-    app.run()
-
+    # 本地运行时开启 Debug 模式
+    # Render 部署时，Gunicorn 会忽略这里，直接调用 app
+    app.run(debug=True, port=5000)
