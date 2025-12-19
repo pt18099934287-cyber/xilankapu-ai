@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>AI 西兰卡普纹样设计</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            padding-top: 50px;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 600px;
+        }
+        h1 { color: #333; margin-bottom: 20px; font-weight: bold; }
+        .desc { color: #666; font-size: 14px; margin-bottom: 30px; }
+
+        .input-group {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        input {
+            padding: 12px;
+            width: 60%;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        button {
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+
+        #result-area {
+            margin-top: 30px;
+            min-height: 400px;
+            background: #fafafa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed #eee;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        img {
+            max-width: 100%;
+            display: block;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .loading-text { color: #666; font-size: 14px; }
+        .error-text { color: #dc3545; padding: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>西兰卡普 · 纹样生成器</h1>
+        <p class="desc">基于 Hugging Face SDXL 模型 · 严谨复刻岩墙花非遗纹样</p>
+
+        <div class="input-group">
+            <input type="text" id="keyword" placeholder="输入关键词（如：花）" value="花">
+            <button onclick="generatePattern()" id="gen-btn">立即生成</button>
+        </div>
+
+        <div id="result-area">
+            <p class="loading-text" id="status-text">请输入关键词生成纹样</p>
+            <img id="pattern-img" src="" style="display: none;">
+        </div>
+    </div>
+
+    <script>
+        async function generatePattern() {
+            const keywordInput = document.getElementById('keyword');
+            const btn = document.getElementById('gen-btn');
+            const statusText = document.getElementById('status-text');
+            const img = document.getElementById('pattern-img');
+
+            const keyword = keywordInput.value.trim();
+            if (!keyword) {
+                alert("请输入关键词");
+                return;
+            }
+
+            // 1. UI 切换到加载状态
+            btn.disabled = true;
+            btn.innerText = "织造中...";
+            img.style.display = 'none';
+            statusText.style.display = 'block';
+            statusText.className = 'loading-text';
+            statusText.innerText = "正在指挥 AI 编织“" + keyword + "”纹样，请稍候 (约10-20秒)...";
+
+            try {
+                // 2. 发送请求给后端
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ keyword: keyword })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // 3. 成功：显示图片链接
+                    img.src = data.image_url;
+                    img.onload = () => {
+                        statusText.style.display = 'none';
+                        img.style.display = 'block';
+                        btn.disabled = false;
+                        btn.innerText = "立即生成";
+                    };
+                } else {
+                    // 失败处理
+                    statusText.className = 'error-text';
+                    statusText.innerText = data.error;
+                    btn.disabled = false;
+                    btn.innerText = "重试";
+                }
+            } catch (e) {
+                statusText.className = 'error-text';
+                statusText.innerText = "网络错误，请检查连接。";
+                console.error(e);
+                btn.disabled = false;
+                btn.innerText = "重试";
+            }
+        }
+    </script>
+</body>
+</html>
