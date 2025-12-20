@@ -15,11 +15,10 @@ app = Flask(__name__)
 
 # ================= 配置区域 =================
 # 1. 设置图片路径
-# 注意：在 GitHub 上一定要确保 static/gallery 文件夹里已经有图片了
 STATIC_FOLDER = 'static'
 GALLERY_FOLDER = os.path.join(STATIC_FOLDER, 'gallery')
 
-# 确保文件夹存在（防止报错）
+# 确保文件夹存在
 for folder in [STATIC_FOLDER, GALLERY_FOLDER]:
     if not os.path.exists(folder):
         os.makedirs(folder)
@@ -34,7 +33,78 @@ if not HF_API_TOKEN:
 API_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-base-1.0"
 HEADERS = {"Authorization": f"Bearer {HF_API_TOKEN}"}
 
-# ================= 核心逻辑 =================
+# ================= 核心逻辑：图片档案库 (已匹配你的文件名) =================
+GALLERY_DB = [
+    # --- 经典图谱 (带文字说明的图) ---
+    {
+        "filename": "8gou.jpg",
+        "tags": ["八勾纹", "八勾", "8 hook", "brown", "土色", "几何"]
+    },
+    {
+        "filename": "jihezi.jpg",
+        "tags": ["鸡盒子花", "鸡", "盒子", "bird", "box", "彩色"]
+    },
+    {
+        "filename": "yangque.jpg",
+        "tags": ["阳雀花", "阳雀", "鸟", "bird", "totem", "green", "绿色"]
+    },
+    {
+        "filename": "jingoulian.jpg",
+        "tags": ["金勾莲", "勾", "hook", "lotus", "flower", "red", "红色"]
+    },
+    {
+        "filename": "nanguahua.jpg",  # 截图文件名为 nanguahua.jpg
+        "tags": ["南瓜花", "南瓜", "flower", "black", "黑色", "植物"]
+    },
+    {
+        "filename": "jiaoshanmei.jpg",
+        "tags": ["焦山梅", "梅花", "plum", "flower", "green", "绿色"]
+    },
+    {
+        "filename": "juchihua.jpg",   # 截图文件名为 juchihua.jpg
+        "tags": ["锯齿花", "锯齿", "波浪", "zigzag", "sawtooth", "yellow", "黄色"]
+    },
+    {
+        "filename": "huwen.jpg",
+        "tags": ["台台花", "虎纹", "tiger", "yellow", "黄色", "动物"]
+    },
+    {
+        "filename": "yizihua.jpg",
+        "tags": ["椅子花", "椅子", "chair", "square", "pink", "粉色"]
+    },
+    
+    # --- 四十八勾纹 (两张) ---
+    {
+        "filename": "48gou-1.jpg",
+        "tags": ["四十八勾", "48勾", "hook", "long", "red", "红色"]
+    },
+    {
+        "filename": "48gou-2.jpg",
+        "tags": ["四十八勾", "48勾", "hook", "black", "黑色", "土家织锦"]
+    },
+
+    # --- 实物参考图 (ref系列) ---
+    {
+        "filename": "ref_01.jpg", # 蓝底六边形
+        "tags": ["六边形", "几何", "hex", "blue", "蓝色", "实物"]
+    },
+    {
+        "filename": "ref_02.jpg", # 红底大菱形
+        "tags": ["岩墙花", "菱形", "diamond", "red", "红色", "实物"]
+    },
+    {
+        "filename": "ref_03.jpg", # 黄底几何
+        "tags": ["几何", "参考图", "geometric", "yellow", "黄色"]
+    },
+    {
+        "filename": "ref_04.jpg", # 黄色抱枕
+        "tags": ["抱枕", "枕头", "pillow", "yellow", "黄色", "家居"]
+    },
+    {
+        "filename": "ref_05.jpg", # 长条挂饰
+        "tags": ["挂饰", "长条", "runner", "brown", "土色"]
+    }
+]
 
 def build_expert_prompt(keyword):
     """Prompt 工程"""
@@ -45,6 +115,7 @@ def build_expert_prompt(keyword):
         "Strict geometric straight lines, NO curves. "
     )
 
+    # 针对“岩墙花”的特殊修正
     if "花" in keyword or "岩墙" in keyword:
         content_desc = (
             "Subject: Geometric Diamond Flower Pattern (Yanqianghua style). "
@@ -63,89 +134,4 @@ def build_expert_prompt(keyword):
         "Color Palette: "
         "Background is Deep Indigo Blue (Blackish Blue). "
         "Pattern colors: Bright Madder Red, Golden Yellow, Cyan Blue, White and Black accents. "
-        "Solid color blocks, high contrast, no gradients. "
-    )
-
-    return f"{base_style} {content_desc} {color_rule}"
-
-def query_huggingface_api(payload):
-    try:
-        response = requests.post(API_URL, headers=HEADERS, json=payload)
-        return response.content
-    except Exception as e:
-        print(f"网络请求错误: {e}")
-        return None
-
-# ================= 路由接口 =================
-
-@app.route('/', methods=['GET'])
-def index():
-    return render_template('index.html')
-
-# ✅ 新增功能：获取本地画廊图片列表
-@app.route('/get_gallery', methods=['GET'])
-def get_gallery_images():
-    images = []
-    # 扫描 static/gallery 文件夹里的所有文件
-    if os.path.exists(GALLERY_FOLDER):
-        for filename in os.listdir(GALLERY_FOLDER):
-            # 只读取图片文件
-            if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
-                # 生成给网页用的链接
-                images.append(f"/static/gallery/{filename}")
-    
-    # 按文件名排序，保证大家看到的顺序一样
-    images.sort()
-    return jsonify({"success": True, "images": images})
-
-@app.route('/generate', methods=['POST'])
-def generate():
-    data = request.json
-    keyword = data.get('keyword', '').strip()
-    
-    if not keyword:
-        return jsonify({"success": False, "error": "请输入关键词"})
-
-    try:
-        prompt_text = build_expert_prompt(keyword)
-        print(f"Prompt: {prompt_text[:60]}...")
-
-        image_bytes = query_huggingface_api({
-            "inputs": prompt_text,
-            "parameters": {
-                "negative_prompt": "architecture, building, tower, face, rug, carpet, central medallion, realistic flower, round shape, blurry, low quality, 3d render, messy lines, curves, organic shapes, watermark, text, realistic photo",
-                "width": 768,
-                "height": 1024,
-                "num_inference_steps": 30, 
-                "guidance_scale": 7.5,
-            }
-        })
-
-        if image_bytes is None:
-             return jsonify({"success": False, "error": "网络连接失败。"})
-
-        try:
-            text_response = image_bytes.decode('utf-8')
-            error_msg = json.loads(text_response)
-            if isinstance(error_msg, dict) and 'error' in error_msg:
-                err_str = str(error_msg['error'])
-                if "loading" in err_str:
-                    return jsonify({"success": False, "error": "模型正在唤醒中，请等待 20 秒后再次点击生成..."})
-                return jsonify({"success": False, "error": f"API 报错: {err_str}"})
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            pass
-
-        filename = f"gen_{int(time.time())}.png"
-        save_path = os.path.join(STATIC_FOLDER, filename)
-        
-        with open(save_path, 'wb') as f:
-            f.write(image_bytes)
-
-        return jsonify({"success": True, "image_url": f"static/{filename}"})
-
-    except Exception as e:
-        print(f"生成失败: {e}")
-        return jsonify({"success": False, "error": str(e)})
-
-if __name__ == '__main__':
-    app.run()
+        "Solid color blocks, high contrast, no gradients.
