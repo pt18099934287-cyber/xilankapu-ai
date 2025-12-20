@@ -34,74 +34,74 @@ API_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/stable-
 HEADERS = {"Authorization": f"Bearer {HF_API_TOKEN}"}
 
 # ================= 核心逻辑：图片档案库 =================
-# ✅ 已根据你的文件夹截图 (image_0cda02.jpg) 完美匹配文件名
+# ✅ 包含了你截图里的所有图片，并给 ref 系列都加上了“岩墙花”标签
 GALLERY_DB = [
-    # --- 经典纹样 ---
+    # --- 1. 经典纹样系列 ---
     {
         "filename": "8gou.jpg",
-        "tags": ["八勾纹", "八勾", "8 hook", "brown", "土色"]
+        "tags": ["八勾纹", "八勾", "8 hook", "brown", "土色", "几何", "勾"]
     },
     {
         "filename": "jihezi.jpg",
-        "tags": ["鸡盒子花", "鸡", "盒子", "bird", "box"]
+        "tags": ["鸡盒子花", "鸡", "盒子", "bird", "box", "彩色", "花"]
     },
     {
         "filename": "yangque.jpg",
-        "tags": ["阳雀花", "阳雀", "鸟", "bird", "totem", "green", "绿色"]
+        "tags": ["阳雀花", "阳雀", "鸟", "bird", "totem", "green", "绿色", "花"]
     },
     {
         "filename": "jingoulian.jpg",
-        "tags": ["金勾莲", "勾", "hook", "lotus", "flower", "red", "红色"]
+        "tags": ["金勾莲", "勾", "hook", "lotus", "flower", "red", "红色", "花"]
     },
     {
         "filename": "48gou-1.jpg",
-        "tags": ["四十八勾", "48勾", "hook", "long", "red", "红色"]
-    },
-    {
-        "filename": "nanguahua.jpg",
-        "tags": ["南瓜花", "南瓜", "flower", "black", "黑色"]
-    },
-    {
-        "filename": "huwen.jpg",
-        "tags": ["台台花", "虎纹", "tiger", "yellow", "黄色"]
+        "tags": ["四十八勾", "48勾", "hook", "long", "red", "红色", "勾"]
     },
     {
         "filename": "48gou-2.jpg",
-        "tags": ["四十八勾", "48勾", "hook", "black", "黑色", "土家织锦"]
+        "tags": ["四十八勾", "48勾", "hook", "black", "黑色", "土家织锦", "勾"]
+    },
+    {
+        "filename": "nanguahua.jpg",
+        "tags": ["南瓜花", "南瓜", "flower", "black", "黑色", "植物", "花"]
+    },
+    {
+        "filename": "huwen.jpg",
+        "tags": ["台台花", "虎纹", "tiger", "yellow", "黄色", "动物", "花"]
     },
     {
         "filename": "jiaoshanmei.jpg",
-        "tags": ["焦山梅", "梅花", "plum", "flower", "green", "绿色"]
+        "tags": ["焦山梅", "梅花", "plum", "flower", "green", "绿色", "花"]
     },
     {
         "filename": "juchihua.jpg",
-        "tags": ["锯齿花", "锯齿", "波浪", "zigzag", "sawtooth", "yellow", "黄色"]
+        "tags": ["锯齿花", "锯齿", "波浪", "zigzag", "sawtooth", "yellow", "黄色", "花"]
     },
     {
         "filename": "yizihua.jpg",
-        "tags": ["椅子花", "椅子", "chair", "square", "pink", "粉色"]
+        "tags": ["椅子花", "椅子", "chair", "square", "pink", "粉色", "花"]
     },
 
-    # --- 实物参考图 (注意 ref_02 是 png) ---
+    # --- 2. 实物参考图 (全部标记为岩墙花) ---
     {
         "filename": "ref_01.jpg", 
-        "tags": ["六边形", "几何", "hex", "blue", "蓝色", "实物"]
+        "tags": ["岩墙花", "六边形", "几何", "hex", "blue", "蓝色", "实物", "花"]
     },
     {
-        "filename": "ref_02.png", # ✅ 修正为 .png，对应你的截图
-        "tags": ["岩墙花", "菱形", "diamond", "red", "红色", "实物"]
+        "filename": "ref_02.png", # 注意：这张是 png
+        "tags": ["岩墙花", "菱形", "diamond", "red", "红色", "实物", "花"]
     },
     {
         "filename": "ref_03.jpg", 
-        "tags": ["几何", "参考图", "geometric", "yellow", "黄色"]
+        "tags": ["岩墙花", "几何", "参考图", "geometric", "yellow", "黄色", "实物", "花"]
     },
     {
         "filename": "ref_04.jpg", 
-        "tags": ["抱枕", "枕头", "pillow", "yellow", "黄色", "家居"]
+        "tags": ["岩墙花", "抱枕", "枕头", "pillow", "yellow", "黄色", "家居", "实物", "花"]
     },
     {
         "filename": "ref_05.jpg", 
-        "tags": ["挂饰", "长条", "runner", "brown", "土色"]
+        "tags": ["岩墙花", "挂饰", "长条", "runner", "brown", "土色", "实物", "花"]
     }
 ]
 
@@ -128,7 +128,6 @@ def build_expert_prompt(keyword):
     else:
         content_desc = f"Subject: Geometric pattern based on concept '{keyword}', repeating abstract shapes. "
 
-    # ✅ 修复了之前的语法错误，确保字符串闭合
     color_rule = (
         "Color Palette: "
         "Background is Deep Indigo Blue (Blackish Blue). "
@@ -169,7 +168,7 @@ def get_gallery_images():
             if not keyword:
                 images.append(file_url)
             else:
-                # 模糊匹配
+                # 模糊匹配：只要 tags 里包含关键词就算选中
                 is_match = False
                 for tag in item['tags']:
                     if keyword in tag.lower():
@@ -231,4 +230,3 @@ def generate():
 
 if __name__ == '__main__':
     app.run()
-
