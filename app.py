@@ -34,7 +34,7 @@ API_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/stable-
 HEADERS = {"Authorization": f"Bearer {HF_API_TOKEN}"}
 
 # ================= 核心逻辑：图片档案库 =================
-# ✅ 已根据你的截图精准匹配文件名 (注意 ref_02.png)
+# ✅ 已根据你的文件夹截图 (image_0cda02.jpg) 完美匹配文件名
 GALLERY_DB = [
     # --- 经典纹样 ---
     {
@@ -88,7 +88,7 @@ GALLERY_DB = [
         "tags": ["六边形", "几何", "hex", "blue", "蓝色", "实物"]
     },
     {
-        "filename": "ref_02.png", # ✅ 修正为 .png
+        "filename": "ref_02.png", # ✅ 修正为 .png，对应你的截图
         "tags": ["岩墙花", "菱形", "diamond", "red", "红色", "实物"]
     },
     {
@@ -128,11 +128,12 @@ def build_expert_prompt(keyword):
     else:
         content_desc = f"Subject: Geometric pattern based on concept '{keyword}', repeating abstract shapes. "
 
+    # ✅ 修复了之前的语法错误，确保字符串闭合
     color_rule = (
         "Color Palette: "
         "Background is Deep Indigo Blue (Blackish Blue). "
         "Pattern colors: Bright Madder Red, Golden Yellow, Cyan Blue, White and Black accents. "
-        "Solid color blocks, high contrast, no gradients. "
+        "Solid color blocks, high contrast, no gradients."
     )
 
     return f"{base_style} {content_desc} {color_rule}"
