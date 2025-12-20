@@ -2,147 +2,184 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>AI 西兰卡普纹样设计</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>西兰卡普数字展馆</title>
     <style>
+        :root { --primary: #0d47a1; --accent: #c2185b; --bg: #f3f4f6; }
         body {
-            font-family: "Microsoft YaHei", sans-serif;
-            background-color: #f0f2f5;
-            display: flex;
-            justify-content: center;
-            padding-top: 50px;
+            font-family: 'Microsoft YaHei', sans-serif;
+            background-color: var(--bg);
+            margin: 0; padding: 20px;
+            display: flex; flex-direction: column; align-items: center;
             min-height: 100vh;
-            margin: 0;
         }
         .container {
-            background-color: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            text-align: center;
-            width: 600px;
+            background: white; padding: 40px; border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            width: 100%; max-width: 650px; text-align: center;
         }
-        h1 { color: #333; margin-bottom: 20px; font-weight: bold; }
-        .desc { color: #666; font-size: 14px; margin-bottom: 30px; }
-
+        h1 { margin: 0 0 10px 0; color: #333; letter-spacing: 1px; }
+        .subtitle { color: #666; font-size: 0.9em; margin-bottom: 30px; }
+        
+        /* 输入区 */
         .input-group {
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: center;
-            gap: 10px;
+            background: #eef2f6; padding: 20px; border-radius: 12px;
+            display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
         }
         input {
-            padding: 12px;
-            width: 60%;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 16px;
+            padding: 12px 15px; border: 2px solid #ddd; border-radius: 8px;
+            flex: 1; min-width: 200px; font-size: 16px; outline: none;
+            transition: border 0.3s;
         }
+        input:focus { border-color: var(--primary); }
+        
         button {
-            padding: 12px 24px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.3s;
+            padding: 12px 20px; border: none; border-radius: 8px;
+            font-size: 15px; font-weight: bold; cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s; color: white;
         }
-        button:hover { background-color: #0056b3; }
-        button:disabled { background-color: #ccc; cursor: not-allowed; }
-
-        #result-area {
-            margin-top: 30px;
-            min-height: 400px;
-            background: #fafafa;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px dashed #eee;
-            border-radius: 8px;
-            position: relative;
-            overflow: hidden;
+        button:active { transform: scale(0.98); }
+        
+        .btn-gen { background-color: var(--primary); }
+        .btn-gallery { background-color: var(--accent); }
+        
+        /* 展示区通用样式 */
+        .display-area {
+            margin-top: 30px; min-height: 400px;
+            border: 2px dashed #ddd; border-radius: 12px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            position: relative; overflow: hidden; background: #fafafa;
+            padding: 20px;
         }
-        img {
-            max-width: 100%;
-            display: block;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        
+        /* AI生成图 */
+        #ai-result img {
+            max-width: 100%; border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-        .loading-text { color: #666; font-size: 14px; }
-        .error-text { color: #dc3545; padding: 20px; }
+        
+        /* 画廊网格 */
+        #gallery-grid {
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 15px; width: 100%;
+        }
+        .gallery-item {
+            border-radius: 8px; overflow: hidden; cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s;
+            aspect-ratio: 1; /* 正方形缩略图 */
+        }
+        .gallery-item:hover { transform: scale(1.05); }
+        .gallery-item img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        
+        .loading { color: #666; font-size: 14px; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
+
     <div class="container">
         <h1>西兰卡普 · 纹样生成器</h1>
-        <p class="desc">基于 Hugging Face SDXL 模型 · 严谨复刻岩墙花非遗纹样</p>
+        <p class="subtitle">AI 设计复刻 · 经典非遗图谱</p>
 
         <div class="input-group">
-            <input type="text" id="keyword" placeholder="输入关键词（如：花）" value="花">
-            <button onclick="generatePattern()" id="gen-btn">立即生成</button>
+            <input type="text" id="keyword" value="岩墙花" placeholder="输入关键词...">
+            <button class="btn-gen" onclick="generatePattern()">✨ AI 生成</button>
+            <button class="btn-gallery" onclick="showGallery()">📚 经典图谱</button>
         </div>
 
-        <div id="result-area">
-            <p class="loading-text" id="status-text">请输入关键词生成纹样</p>
-            <img id="pattern-img" src="" style="display: none;">
+        <div id="ai-result" class="display-area">
+            <p id="ai-status" style="color:#888;">点击“AI 生成”开始设计</p>
+            <img id="ai-img" class="hidden">
+        </div>
+
+        <div id="gallery-view" class="display-area hidden">
+            <h3 style="margin-top:0; color:#444;">传统纹样参考库</h3>
+            <div id="gallery-grid">
+                </div>
         </div>
     </div>
 
     <script>
+        const aiView = document.getElementById('ai-result');
+        const galleryView = document.getElementById('gallery-view');
+        const aiImg = document.getElementById('ai-img');
+        const aiStatus = document.getElementById('ai-status');
+        const galleryGrid = document.getElementById('gallery-grid');
+
+        // === 功能 1: AI 生成 ===
         async function generatePattern() {
-            const keywordInput = document.getElementById('keyword');
-            const btn = document.getElementById('gen-btn');
-            const statusText = document.getElementById('status-text');
-            const img = document.getElementById('pattern-img');
+            // 切换视图
+            galleryView.classList.add('hidden');
+            aiView.classList.remove('hidden');
+            
+            const keyword = document.getElementById('keyword').value.trim();
+            if(!keyword) { alert("请输入关键词"); return; }
 
-            const keyword = keywordInput.value.trim();
-            if (!keyword) {
-                alert("请输入关键词");
-                return;
-            }
-
-            // 1. UI 切换到加载状态
-            btn.disabled = true;
-            btn.innerText = "织造中...";
-            img.style.display = 'none';
-            statusText.style.display = 'block';
-            statusText.className = 'loading-text';
-            statusText.innerText = "正在指挥 AI 编织“" + keyword + "”纹样，请稍候 (约10-20秒)...";
-
+            aiImg.classList.add('hidden');
+            aiStatus.innerHTML = "🧶 正在指挥 AI 编织纹样，请稍候...";
+            
             try {
-                // 2. 发送请求给后端
-                const response = await fetch('/generate', {
+                const res = await fetch('/generate', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ keyword: keyword })
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({keyword: keyword})
                 });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    // 3. 成功：显示图片链接
-                    img.src = data.image_url;
-                    img.onload = () => {
-                        statusText.style.display = 'none';
-                        img.style.display = 'block';
-                        btn.disabled = false;
-                        btn.innerText = "立即生成";
+                const data = await res.json();
+                
+                if(data.success) {
+                    aiImg.src = data.image_url;
+                    aiImg.onload = () => {
+                        aiStatus.innerHTML = ""; // 清空文字
+                        aiImg.classList.remove('hidden');
                     };
                 } else {
-                    // 失败处理
-                    statusText.className = 'error-text';
-                    statusText.innerText = data.error;
-                    btn.disabled = false;
-                    btn.innerText = "重试";
+                    aiStatus.innerHTML = "❌ 生成失败: " + data.error;
                 }
-            } catch (e) {
-                statusText.className = 'error-text';
-                statusText.innerText = "网络错误，请检查连接。";
-                console.error(e);
-                btn.disabled = false;
-                btn.innerText = "重试";
+            } catch(e) {
+                aiStatus.innerHTML = "❌ 网络错误，请检查连接";
             }
+        }
+
+        // === 功能 2: 展示画廊 ===
+        async function showGallery() {
+            // 切换视图
+            aiView.classList.add('hidden');
+            galleryView.classList.remove('hidden');
+            galleryGrid.innerHTML = '<p>加载中...</p>';
+
+            try {
+                const res = await fetch('/get_gallery');
+                const data = await res.json();
+                
+                galleryGrid.innerHTML = ""; // 清空加载文字
+                
+                if(data.success && data.images.length > 0) {
+                    data.images.forEach(url => {
+                        // 创建图片元素
+                        const div = document.createElement('div');
+                        div.className = 'gallery-item';
+                        div.innerHTML = `<img src="${url}" onclick="viewBigImage('${url}')">`;
+                        galleryGrid.appendChild(div);
+                    });
+                } else {
+                    galleryGrid.innerHTML = "<p>暂无本地参考图，请联系管理员上传。</p>";
+                }
+            } catch(e) {
+                galleryGrid.innerHTML = "<p>加载失败</p>";
+            }
+        }
+
+        // 点击小图看大图 (简单实现: 用 AI 视图区显示大图)
+        function viewBigImage(url) {
+            galleryView.classList.add('hidden');
+            aiView.classList.remove('hidden');
+            aiStatus.innerHTML = "";
+            aiImg.src = url;
+            aiImg.classList.remove('hidden');
         }
     </script>
 </body>
-
 </html>
