@@ -198,7 +198,7 @@ def generate():
                 "negative_prompt": "architecture, building, tower, face, rug, carpet, central medallion, realistic flower, round shape, blurry, low quality, 3d render, messy lines, curves, organic shapes, watermark, text, realistic photo",
                 "width": 768,
                 "height": 1024,
-                "num_inference_steps": 30, 
+                "num_inference_steps": 25, 
                 "guidance_scale": 7.5,
             }
         })
@@ -231,3 +231,4 @@ def generate():
 
 if __name__ == '__main__':
     app.run()
+
