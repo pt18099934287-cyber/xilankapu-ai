@@ -37,6 +37,7 @@
             padding: 12px 20px; border: none; border-radius: 8px;
             font-size: 15px; font-weight: bold; cursor: pointer;
             transition: transform 0.1s, opacity 0.2s; color: white;
+            white-space: nowrap; /* 防止文字换行 */
         }
         button:active { transform: scale(0.98); }
         
@@ -52,30 +53,18 @@
             padding: 20px;
         }
         
-        /* AI生成图 */
-        #ai-result img {
-            max-width: 100%; border-radius: 8px;
+        /* 图片通用样式 */
+        img {
+            max-width: 100%; 
+            max-height: 500px; /* 限制最大高度，防止图太长 */
+            border-radius: 8px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        
-        /* 画廊网格 */
-        #gallery-grid {
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 15px; width: 100%;
-        }
-        .gallery-item {
-            border-radius: 8px; overflow: hidden; cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s;
-            aspect-ratio: 1; /* 正方形缩略图 */
-        }
-        .gallery-item:hover { transform: scale(1.05); }
-        .gallery-item img {
-            width: 100%; height: 100%; object-fit: cover;
+            display: block;
         }
         
         .loading { color: #666; font-size: 14px; }
         .hidden { display: none !important; }
+        .hint-text { color: #999; font-size: 12px; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -87,7 +76,7 @@
         <div class="input-group">
             <input type="text" id="keyword" value="岩墙花" placeholder="输入关键词...">
             <button class="btn-gen" onclick="generatePattern()">✨ AI 生成</button>
-            <button class="btn-gallery" onclick="showGallery()">📚 经典图谱</button>
+            <button class="btn-gallery" id="btn-gallery" onclick="nextGalleryImage()">📚 经典图谱 (点我切换)</button>
         </div>
 
         <div id="ai-result" class="display-area">
@@ -96,9 +85,12 @@
         </div>
 
         <div id="gallery-view" class="display-area hidden">
-            <h3 style="margin-top:0; color:#444;">传统纹样参考库</h3>
-            <div id="gallery-grid">
+            <h3 style="margin-top:0; color:#444; margin-bottom: 20px;">传统纹样参考库</h3>
+            
+            <div id="single-image-container">
                 </div>
+            
+            <p class="hint-text">💡 再次点击上方“经典图谱”按钮可查看下一张</p>
         </div>
     </div>
 
@@ -107,11 +99,16 @@
         const galleryView = document.getElementById('gallery-view');
         const aiImg = document.getElementById('ai-img');
         const aiStatus = document.getElementById('ai-status');
-        const galleryGrid = document.getElementById('gallery-grid');
+        const singleImageContainer = document.getElementById('single-image-container');
+        const galleryBtn = document.getElementById('btn-gallery');
+
+        // 全局变量：存储画廊图片列表和当前看到第几张
+        let galleryImages = [];
+        let currentImageIndex = 0;
 
         // === 功能 1: AI 生成 ===
         async function generatePattern() {
-            // 切换视图
+            // 切换到 AI 视图
             galleryView.classList.add('hidden');
             aiView.classList.remove('hidden');
             
@@ -143,42 +140,41 @@
             }
         }
 
-        // === 功能 2: 展示画廊 ===
-        async function showGallery() {
-            // 切换视图
+        // === 功能 2: 切换画廊图片 (点一次换一张) ===
+        async function nextGalleryImage() {
+            // 1. 切换到画廊视图
             aiView.classList.add('hidden');
             galleryView.classList.remove('hidden');
-            galleryGrid.innerHTML = '<p>加载中...</p>';
 
-            try {
-                const res = await fetch('/get_gallery');
-                const data = await res.json();
-                
-                galleryGrid.innerHTML = ""; // 清空加载文字
-                
-                if(data.success && data.images.length > 0) {
-                    data.images.forEach(url => {
-                        // 创建图片元素
-                        const div = document.createElement('div');
-                        div.className = 'gallery-item';
-                        div.innerHTML = `<img src="${url}" onclick="viewBigImage('${url}')">`;
-                        galleryGrid.appendChild(div);
-                    });
-                } else {
-                    galleryGrid.innerHTML = "<p>暂无本地参考图，请联系管理员上传。</p>";
+            // 2. 如果图片列表还没加载过，先去服务器抓取
+            if (galleryImages.length === 0) {
+                singleImageContainer.innerHTML = '<p class="loading">正在加载图谱...</p>';
+                try {
+                    const res = await fetch('/get_gallery');
+                    const data = await res.json();
+                    
+                    if(data.success && data.images.length > 0) {
+                        galleryImages = data.images;
+                        currentImageIndex = 0; // 重置到第一张
+                    } else {
+                        singleImageContainer.innerHTML = "<p>暂无本地参考图</p>";
+                        return; // 没图就不用继续了
+                    }
+                } catch(e) {
+                    singleImageContainer.innerHTML = "<p>加载失败</p>";
+                    return;
                 }
-            } catch(e) {
-                galleryGrid.innerHTML = "<p>加载失败</p>";
             }
-        }
 
-        // 点击小图看大图 (简单实现: 用 AI 视图区显示大图)
-        function viewBigImage(url) {
-            galleryView.classList.add('hidden');
-            aiView.classList.remove('hidden');
-            aiStatus.innerHTML = "";
-            aiImg.src = url;
-            aiImg.classList.remove('hidden');
+            // 3. 显示当前索引的这一张图片
+            const imageUrl = galleryImages[currentImageIndex];
+            singleImageContainer.innerHTML = `<img src="${imageUrl}" alt="经典纹样">`;
+            
+            // 4. 更新索引，准备下一次点击 (如果到最后一张了，就回到 0)
+            currentImageIndex++;
+            if (currentImageIndex >= galleryImages.length) {
+                currentImageIndex = 0;
+            }
         }
     </script>
 </body>
